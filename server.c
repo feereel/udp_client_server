@@ -32,7 +32,9 @@ void broadcast(int socket, char buf[BUFFSIZE], size_t length, struct sockaddr_in
     if (sendto(socket, buf, length, 0, (struct sockaddr *) &clients[i], client_address_size) < 0){
       printf("error sending message to socket id %d\n", sender_id);
     }
+    printf("Port %d (%s) sended message \"%s\" to port: %d\n", clients[sender_id].sin_port,  buf + 8, buf + 44, clients[i].sin_port);
   }
+  printf("\n");
 }
 
 int main(int argc, char** argv){
@@ -61,13 +63,11 @@ int main(int argc, char** argv){
 
   client_address_size = sizeof(client);
 
-  FILE* file = fopen("test.txt", "w");
-
+  FILE* file = fopen("newfile", "w");
   while(1){
     if((recived = recvfrom(s, buf, sizeof(buf), 0, (struct sockaddr *) &client, (socklen_t *) &client_address_size)) >= 0){
       client_id = addClient(&clients, &clients_len, &client);
     }
-    printf("Messege gathered\n");
     
     if (recived > 44 && buf[44] != '\0'){
       broadcast(s, buf, recived, clients, clients_len, client_id);
@@ -75,8 +75,6 @@ int main(int argc, char** argv){
     }
   }
   
-  free(clients);
-
   fclose(file);
   close(s);
 }
