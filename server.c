@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include <arpa/inet.h>
-#include <unistd.h>
 #include <stdlib.h>
+#include <string.h>
 
-#define BUFFSIZE 1068
+#include "protocol.h"
 
 int addClient(struct sockaddr_in** clients, ssize_t* clients_len, struct sockaddr_in* client){
   int client_id = -1;
@@ -22,19 +22,38 @@ int addClient(struct sockaddr_in** clients, ssize_t* clients_len, struct sockadd
   return client_id;
 }
 
-void broadcast(int socket, char buf[BUFFSIZE], size_t length, struct sockaddr_in* clients, ssize_t clients_len, int sender_id){
+void broadcast(int socket, struct dtgram* message, size_t length, struct sockaddr_in* clients, ssize_t clients_len, int sender_id){
   socklen_t client_address_size;
   for (size_t i = 0; i < clients_len; i++){
     if (i == sender_id) continue;
 
     client_address_size = sizeof(clients[i]);
 
-    if (sendto(socket, buf, length, 0, (struct sockaddr *) &clients[i], client_address_size) < 0){
+    if (sendto(socket, message, length, 0, (struct sockaddr *) &clients[i], client_address_size) < 0){
       printf("error sending message to socket id %d\n", sender_id);
     }
-    printf("Port %d (%s) sended message \"%s\" to port: %d\n", clients[sender_id].sin_port,  buf + 8, buf + 44, clients[i].sin_port);
+    printf("Port %d (%s) sended message \"%s\" to port: %d\n", clients[sender_id].sin_port,  message->name, message->text, clients[i].sin_port);
   }
   printf("\n");
+}
+
+/// @brief Is valid dgram
+/// @return returns 0 if datagram is valid or less then 0 if is not
+int validate_dgram(struct dtgram* message){
+  if (message->colour < 48 || message->colour > 55) return -1;
+  if (message->prefix != PREFIX) return -2;
+  if (message->prefix != PREFIX) return -3;
+
+  int sender_len = strlen(message->name);
+  if (sender_len > 32) return -4;
+
+  int text_len = strlen(message->text);
+  if (text_len > 1024) return -5;
+
+  if (message->text[0] == '\0') return -6;
+  if (message->text[0] == '\n') return -7;
+  
+  return 0;
 }
 
 int main(int argc, char** argv){
@@ -42,7 +61,7 @@ int main(int argc, char** argv){
   struct sockaddr_in client, server;
   struct sockaddr_in* clients = malloc(0);
   ssize_t clients_len = 0;
-  char buf[BUFFSIZE];
+  struct dtgram message;
 
   s = socket(AF_INET, SOCK_DGRAM, 0);
   if (s < 0){
@@ -65,18 +84,16 @@ int main(int argc, char** argv){
 
   FILE* file = fopen("newfile", "w");
   while(1){
-    if((recived = recvfrom(s, buf, sizeof(buf), 0, (struct sockaddr *) &client, (socklen_t *) &client_address_size)) >= 0){
+    if((recived = recvfrom(s, &message, DTGRAMSIZE, 0, (struct sockaddr *) &client, (socklen_t *) &client_address_size)) >= 0){
       client_id = addClient(&clients, &clients_len, &client);
     }
     
-    if (recived > 44 && buf[44] != '\0'){
-      broadcast(s, buf, recived, clients, clients_len, client_id);
-      fwrite(buf, sizeof(char), recived, file);
+    if (validate_dgram(&message) == 0){
+      broadcast(s, &message, recived, clients, clients_len, client_id);
+      fwrite(&message, sizeof(char), recived, file);
     }
   }
   
   fclose(file);
   close(s);
 }
-
-
