@@ -99,6 +99,7 @@ int main(int argc, char** argv){
     }
   }
   
+  free(clients);
   fclose(file);
   close(s);
 }

@@ -141,5 +141,6 @@ int main(int argc, char** argv){
     }
   }
 
+  free(text);
   close(socket_desc);
 }
