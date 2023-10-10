@@ -7,6 +7,8 @@
 
 int addClient(struct sockaddr_in** clients, ssize_t* clients_len, struct sockaddr_in* client){
   int client_id = -1;
+  char client_str_ip[INET_ADDRSTRLEN];
+
   for (size_t i = 0; i < *clients_len; i++){
     if((client->sin_addr.s_addr == (*clients)[i].sin_addr.s_addr) && (client->sin_port == (*clients)[i].sin_port)){
       client_id = i;
@@ -18,6 +20,9 @@ int addClient(struct sockaddr_in** clients, ssize_t* clients_len, struct sockadd
     *clients = realloc(*clients, sizeof(*client) * (*clients_len));
     (*clients)[*clients_len - 1] = *client;
     client_id = *clients_len - 1;
+
+    inet_ntop(AF_INET, &(client->sin_addr), client_str_ip, INET_ADDRSTRLEN);
+    printf("New user connected from %s:%d, total users: %zd.\n\n", client_str_ip, client->sin_port, *clients_len);
   }
   return client_id;
 }
@@ -32,9 +37,8 @@ void broadcast(int socket, struct dtgram* message, size_t length, struct sockadd
     if (sendto(socket, message, length, 0, (struct sockaddr *) &clients[i], client_address_size) < 0){
       printf("error sending message to socket id %d\n", sender_id);
     }
-    printf("Port %d (%s) sended message \"%s\" to port: %d\n", clients[sender_id].sin_port,  message->name, message->text, clients[i].sin_port);
   }
-  printf("\n");
+  printf("Port %d (%s) sended message:\n-> %s\n", clients[sender_id].sin_port,  message->name, message->text);
 }
 
 /// @brief Is valid dgram
@@ -82,7 +86,7 @@ int main(int argc, char** argv){
 
   client_address_size = sizeof(client);
 
-  FILE* file = fopen("newfile", "w");
+  FILE* file = fopen("serverlogs.bin", "w");
   while(1){
     if((recived = recvfrom(s, &message, DTGRAMSIZE, 0, (struct sockaddr *) &client, (socklen_t *) &client_address_size)) >= 0){
       client_id = addClient(&clients, &clients_len, &client);
@@ -91,6 +95,7 @@ int main(int argc, char** argv){
     if (validate_dgram(&message) == 0){
       broadcast(s, &message, recived, clients, clients_len, client_id);
       fwrite(&message, sizeof(char), recived, file);
+      fflush(file);
     }
   }
   
