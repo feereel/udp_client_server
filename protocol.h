@@ -4,8 +4,8 @@
 #include <unistd.h>
 
 #define DTGRAMSIZE 1068
-#define PREFIX 0xFFEEDDCC
-#define SUFFIX 0x98765432
+#define PREFIX 0xCCDDEEFF
+#define SUFFIX 0x32547698
 #define PORT 31006
 
 struct dtgram{
