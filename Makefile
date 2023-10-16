@@ -10,4 +10,4 @@ all: clean $(BIN)
 
 clean:
 	@echo "Cleaning"
-	@rm -fv *.exe
+	@rm -fv *.exe *.bin
