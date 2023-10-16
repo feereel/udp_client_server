@@ -2,7 +2,7 @@ CC=gcc
 CFLAGS=-Wall -pedantic -Werror
 BIN=client.exe server.exe
 
-all: clean $(BIN)
+build: clean $(BIN)
 
 %.exe:%.c
 	@echo "Building $@..."
